@@ -1,1 +1,52 @@
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+.pytest_cache/
+db.sqlite3
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Flask
+instance/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# VSCode
+.vscode/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# PyCharm
+.idea/
+
+# dotenv file (sensitive info like passwords)
+.env
+
+# Logs
+*.log
+
+# SQLite
+*.db
+*.db-journal
+
+# Coverage reports
+.coverage
+.coverage.*
+
+# Build directories
+build/
+dist/
+*.egg-info/
 
