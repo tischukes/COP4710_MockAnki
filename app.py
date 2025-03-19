@@ -33,7 +33,7 @@ def index():
     # Connect to the database and retrieve data
     connection = get_db_connection()
     with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM your_table_name")  # Replace with your actual table name
+        cursor.execute("SELECT * FROM books")  
         result = cursor.fetchall()
     connection.close()
     
