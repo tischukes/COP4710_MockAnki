@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request, render_template
 from dotenv import load_dotenv
 import os
 import pymysql
@@ -33,11 +33,51 @@ def index():
     # Connect to the database and retrieve data
     connection = get_db_connection()
     with connection.cursor() as cursor:
-        cursor.execute("SELECT * FROM books")  
+        cursor.execute("SELECT * FROM flashcards")  # Replace with your actual table name
         result = cursor.fetchall()
     connection.close()
-    
     return jsonify(result)
+
+#scroll through the flashcards deck here
+@app.route('/review', methods=['GET'])
+def review_flashcard():
+    flashcard_id = request.args.get('flashcard_id', default=1, type=int)
+    action = request.args.get('action', default=None, type=str)
+
+    connection = get_db_connection()
+
+    try:
+        with connection.cursor() as cursor:
+            # Query to get the total number of flashcards in the deck
+            cursor.execute("SELECT COUNT(*) AS total_flashcards FROM flashcards")
+            total_flashcards_result = cursor.fetchone()
+            total_flashcards = total_flashcards_result['total_flashcards']
+
+            # Fetch the current flashcard based on the flashcard_id
+            if action == 'next':
+                query = "SELECT * FROM flashcards WHERE id > %s ORDER BY id ASC LIMIT 1"
+                cursor.execute(query, (flashcard_id,))
+            elif action == 'previous':
+                query = "SELECT * FROM flashcards WHERE id < %s ORDER BY id DESC LIMIT 1"
+                cursor.execute(query, (flashcard_id,))
+            else:
+                query = "SELECT * FROM flashcards WHERE id = %s"
+                cursor.execute(query, (flashcard_id,))
+            
+            flashcard = cursor.fetchone()
+
+        if flashcard:
+            # We may use another counter variable instead of 
+            # using id since we want to generate order randomly in future
+            flashcard_position = flashcard['id']
+            flashcard_number = flashcard_position  
+
+            return render_template('review.html', flashcard=flashcard, 
+                                   flashcard_number=flashcard_number, total_flashcards=total_flashcards)
+
+        return jsonify({"message": "No flashcard found"})
+    finally:
+        connection.close()
 
 if __name__ == '__main__':
     app.run(debug=True)

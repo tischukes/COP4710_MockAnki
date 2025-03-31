@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<head>
+    <title>Flashcard Review</title>
+</head>
+<body>
+    <h1>Flashcard Review</h1>
+
+    <div>
+        <p><strong>Term:</strong> {{ flashcard['term'] }}</p>
+        <p><strong>Definition:</strong> {{ flashcard['definition'] }}</p>
+        <p><strong>Flashcard {{ flashcard_number }} of {{ total_flashcards }}</strong></p>
+    </div>
+
+    <form action="/review" method="get">
+        <input type="hidden" name="flashcard_id" value="{{ flashcard['id'] }}">
+        <button type="submit" name="action" value="previous">Previous</button>
+        <button type="submit" name="action" value="next">Next</button>
+    </form>
+</body>
+</html>
