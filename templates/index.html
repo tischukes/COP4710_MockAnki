@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcards App</title>
+</head>
+<body>
+    <h1>Mock Anki</h1>
+
+    <h2>Available Decks:</h2>
+    <ul>
+        {% for deck in decks %}
+        <li>
+            <a href="{{ url_for('print_deck', deck_id=deck['id']) }}">
+                {{ deck['name'] }}
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <h2>Add Deck:</h2>
+    <form action="{{ url_for('add_deck') }}" method="POST">
+        <label for="deck_name">Deck Name:</label>
+        <input type="text" id="deck_name" name="deck_name" required>
+        <button type="submit">Add Deck</button>
+    </form>
+
+    <h3>Search</h3>
+    <form action="{{ url_for('search') }}" method="GET">
+        <input type="text" name="query" placeholder="Search decks or flashcards..." required>
+        <button type="submit">Search</button>
+    </form>
+
+</body>
+</html>

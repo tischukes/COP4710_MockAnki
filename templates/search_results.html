@@ -1,0 +1,27 @@
+<h2>Search Results for "{{ query }}"</h2>
+
+{% if decks %}
+    <h3>Decks</h3>
+    <ul>
+        {% for deck in decks %}
+            <li>
+                <a href="{{ url_for('print_deck', deck_id=deck['id']) }}">{{ deck['name'] }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No decks found.</p>
+{% endif %}
+
+{% if flashcards %}
+    <h3>Flashcards</h3>
+    <ul>
+        {% for flashcard in flashcards %}
+            <li>
+                <strong>{{ flashcard['term'] }}:</strong> {{ flashcard['definition'] }}
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No flashcards found.</p>
+{% endif %}

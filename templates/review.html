@@ -1,20 +1,24 @@
 <!DOCTYPE html>
+<html>
 <head>
     <title>Flashcard Review</title>
 </head>
 <body>
-    <h1>Flashcard Review</h1>
-
-    <div>
-        <p><strong>Term:</strong> {{ flashcard['term'] }}</p>
-        <p><strong>Definition:</strong> {{ flashcard['definition'] }}</p>
-        <p><strong>Flashcard {{ flashcard_number }} of {{ total_flashcards }}</strong></p>
-    </div>
-
-    <form action="/review" method="get">
-        <input type="hidden" name="flashcard_id" value="{{ flashcard['id'] }}">
-        <button type="submit" name="action" value="previous">Previous</button>
-        <button type="submit" name="action" value="next">Next</button>
-    </form>
+    {% if flashcard %}
+        <h2>Term: {{ flashcard['term'] }}</h2>
+        <p>Definition: {{ flashcard['definition'] }}</p>
+        <form method="POST">
+            <label for="response">Rate your familiarity (1-4):</label>
+            <select name="response" required>
+                <option value="1">1 - Again</option>
+                <option value="2">2 - Hard</option>
+                <option value="3">3 - Good</option>
+                <option value="4">4 - Easy</option>
+            </select>
+            <button type="submit">Submit</button>
+        </form>
+    {% else %}
+        <p>No more flashcards to review.</p>
+    {% endif %}
 </body>
 </html>
