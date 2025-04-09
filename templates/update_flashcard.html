@@ -1,0 +1,13 @@
+<h2>Update Flashcard</h2>
+
+<form action="{{ url_for('update_flashcard', flashcard_id=flashcard['id']) }}" method="POST">
+    <label for="term">Term:</label>
+    <input type="text" id="term" name="term" value="{{ flashcard['term'] }}" required>
+
+    <label for="definition">Definition:</label>
+    <input type="text" id="definition" name="definition" value="{{ flashcard['definition'] }}" required>
+
+    <button type="submit">Update Flashcard</button>
+</form>
+
+<a href="{{ url_for('print_deck', deck_id=flashcard['deck_id']) }}">Cancel</a>

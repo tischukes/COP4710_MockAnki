@@ -1,0 +1,38 @@
+<h2>Flashcards for {{ deck_name }}</h2>
+
+<ul>
+    {% for flashcard in flashcards %}
+        <li>
+            <p>{{ flashcard.term }}: {{ flashcard.definition }}</p>
+            
+            <form action="{{ url_for('delete_flashcard', flashcard_id=flashcard.id) }}" method="POST">
+                <button type="submit">Delete</button>
+            </form>
+
+            <form action="{{ url_for('update_flashcard', flashcard_id=flashcard.id) }}" method="GET">
+                <button type="submit">Update</button>
+            </form>
+        </li>
+    {% endfor %}
+</ul>
+
+<!---
+<ul>
+    {% for flashcard in flashcards %}
+        <li>
+            <strong>{{ flashcard['term'] }}:</strong> {{ flashcard['definition'] }}
+        </li>
+    {% endfor %}
+</ul>
+-->
+
+<h3>Add a New Flashcard to {{ deck_name }}</h3>
+<form action="{{ url_for('add_flashcard', deck_id=deck_id) }}" method="POST">
+    <label for="term">Term:</label>
+    <input type="text" id="term" name="term" required>
+
+    <label for="definition">Definition:</label>
+    <input type="text" id="definition" name="definition" required>
+
+    <button type="submit">Add Flashcard</button>
+</form>
