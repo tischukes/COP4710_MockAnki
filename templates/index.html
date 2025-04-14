@@ -15,6 +15,10 @@
             <a href="{{ url_for('print_deck', deck_id=deck['id']) }}">
                 {{ deck['name'] }}
             </a>
+
+            <a href="{{ url_for('review', deck_id=deck['id']) }}">
+                <button>Review</button>
+            </a>
         </li>
         {% endfor %}
     </ul>

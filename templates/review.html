@@ -5,15 +5,16 @@
 </head>
 <body>
     {% if flashcard %}
-        <h2>Term: {{ flashcard['term'] }}</h2>
+        <p>Term: {{ flashcard['term'] }}</p>
         <p>Definition: {{ flashcard['definition'] }}</p>
-        <form method="POST">
+        <form method="POST" action="{{ url_for('grade', card_id=flashcard['id']) }}">
+            
             <label for="response">Rate your familiarity (1-4):</label>
-            <select name="response" required>
-                <option value="1">1 - Again</option>
-                <option value="2">2 - Hard</option>
-                <option value="3">3 - Good</option>
-                <option value="4">4 - Easy</option>
+            <select name="grade" required>
+                <option value="again">1 - Again</option>
+                <option value="hard">2 - Hard</option>
+                <option value="good">3 - Good</option>
+                <option value="easy">4 - Easy</option>
             </select>
             <button type="submit">Submit</button>
         </form>
