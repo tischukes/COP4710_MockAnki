@@ -1,14 +1,14 @@
 from flask import Flask, jsonify, request, render_template, redirect, url_for
 from dotenv import load_dotenv
+from datetime import datetime
+from datetime import timedelta as td
 import os
 import pymysql
 import random
 from simple_spaced_repetition import Card
 
-# Load environment variables from .env file
 load_dotenv()
 
-# Initialize Flask app
 app = Flask(__name__)
 
 # Get MySQL connection details from environment variables
@@ -17,7 +17,35 @@ MYSQL_USER = os.getenv('MYSQL_USER')
 MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD')
 MYSQL_DB = os.getenv('MYSQL_DB')
 
-# MySQL database connection
+class NewCard(Card):
+    def __init__(self, id, front, back, last_reviewed=None, interval=None, ease=2.5, step=0, status='learning'):
+        
+        interval_td = td(seconds=interval) if isinstance(interval, (int, float)) else interval
+        super().__init__(status=status, interval=interval_td, ease=ease, step=step)
+
+        self.id = id
+        self.front = front
+        self.back = back
+
+        if isinstance(last_reviewed, str):
+            self.last_reviewed = datetime.strptime(last_reviewed, "%Y-%m-%d %H:%M:%S")
+        elif isinstance(last_reviewed, float):
+            self.last_reviewed = datetime.fromtimestamp(last_reviewed)
+        else:
+            self.last_reviewed = last_reviewed or datetime.now()
+    def grade_answer(self, response):
+        option_dict = dict(self.options())
+        if response not in option_dict:
+            raise ValueError(f"Invalid response: {response}")
+        
+        next_state = option_dict[response]
+
+        self.status = next_state.status
+        self.interval = next_state.interval
+        self.ease = next_state.ease
+        self.step = next_state.step
+        self.last_reviewed = datetime.now()
+    
 def get_db_connection():
     connection = pymysql.connect(
         host=MYSQL_HOST,
@@ -31,25 +59,23 @@ def get_db_connection():
 
 shuffled_cards = []
 current_card_index = 0 
-#interval = timedelta(seconds=row['interval_seconds']) if row['interval_seconds'] else None
 
 @app.route('/')
 def index():
     connection = get_db_connection()
     cursor = connection.cursor()
     
-    # Fetch all the decks
-    cursor.execute("SELECT * FROM decks")  # Make sure the 'decks' table exists and contains data
+    cursor.execute("SELECT * FROM decks") 
     decks = cursor.fetchall()
     connection.close()
 
     return render_template('index.html', decks=decks)
 
+
 @app.route('/deck/<int:deck_id>', methods=['GET'])
 def print_deck(deck_id):
     connection = get_db_connection()
     with connection.cursor() as cursor:
-        # Fetch deck's name based on id
         cursor.execute("SELECT name FROM decks WHERE id = %s",(deck_id,))
         deck=cursor.fetchone()
 
@@ -57,7 +83,6 @@ def print_deck(deck_id):
             return "Deck not found!", 404
         
         deck_name = deck['name']
-        # Fetch only flashcards for the given deck_id
         cursor.execute("SELECT * FROM flashcards WHERE deck_id = %s", (deck_id,))
         flashcards = cursor.fetchall()
     connection.close()
@@ -68,11 +93,9 @@ def print_deck(deck_id):
 
 @app.route('/add_deck', methods=['POST'])
 def add_deck():
-    # Get the deck name from the form submission
     deck_name = request.form['deck_name']
 
     if deck_name:
-        # Connect to the database and insert the new deck
         connection = get_db_connection()
         cursor = connection.cursor()
 
@@ -81,7 +104,6 @@ def add_deck():
 
         connection.close()
 
-        # Redirect to the homepage after adding the deck
         return redirect(url_for('index'))
     else:
         return jsonify({"message": "Deck name cannot be empty."})
@@ -95,7 +117,6 @@ def add_flashcard(deck_id):
         connection = get_db_connection()
         cursor = connection.cursor()
 
-        # Insert the flashcard into the database, associating it with the deck_id
         cursor.execute("""
             INSERT INTO flashcards (term, definition, deck_id)
             VALUES (%s, %s, %s)
@@ -110,28 +131,25 @@ def add_flashcard(deck_id):
 
 @app.route('/delete_flashcard/<int:flashcard_id>', methods=['POST'])
 def delete_flashcard(flashcard_id):
-    # Get the deck_id of the flashcard to be deleted
     connection = get_db_connection()
     with connection.cursor() as cursor:
         cursor.execute("SELECT deck_id FROM flashcards WHERE id = %s", (flashcard_id,))
         flashcard = cursor.fetchone()
 
         if flashcard is None:
-            return "Flashcard not found!", 404  # Handle case where flashcard does not exist
+            return "Flashcard not found!", 404 
         
         deck_id = flashcard['deck_id']
 
-        # Option 1: Set the deck_id to NULL (removes flashcard from the deck but keeps it in the database)
         cursor.execute("UPDATE flashcards SET deck_id = NULL WHERE id = %s", (flashcard_id,))
 
-        # Option 2: Alternatively, if you want to completely delete the flashcard, use:
-        # cursor.execute("DELETE FROM flashcards WHERE id = %s", (flashcard_id,))
+        # to fully delete : cursor.execute("DELETE FROM flashcards WHERE id = %s", (flashcard_id,))
+        # currently thinking of sending null deck_id cards to a recycling bin to either be added to an existing deck of ultimately deleted
 
         connection.commit()
 
     connection.close()
     
-    # After deletion, redirect to the deck page with the updated list of flashcards
     return redirect(url_for('print_deck', deck_id=deck_id))
 
 @app.route('/update_flashcard/<int:flashcard_id>', methods=['GET','POST'])
@@ -148,7 +166,7 @@ def update_flashcard(flashcard_id):
             return "Flashcard not found", 404
 
         connection.close()
-        return render_template('update_flashcard.html', flashcard=flashcard)  # Render the update form with current flashcard data
+        return render_template('update_flashcard.html', flashcard=flashcard)  
 
     if request.method == 'POST':
             updated_term = request.form['term']
@@ -159,7 +177,6 @@ def update_flashcard(flashcard_id):
 
             deck_id = flashcard['deck_id']
 
-            # Update the flashcard in the database
             cursor.execute("""
                 UPDATE flashcards
                 SET term = %s, definition = %s
@@ -173,18 +190,16 @@ def update_flashcard(flashcard_id):
 
 @app.route('/search', methods=['GET'])
 def search():
-    query = request.args.get('query')  # Get the search query from the user input
+    query = request.args.get('query')  
 
     connection = get_db_connection()
     cursor = connection.cursor()
 
-    # Search for matching decks
     cursor.execute("""
         SELECT * FROM decks WHERE name LIKE %s
     """, ('%' + query + '%',))
     decks_result = cursor.fetchall()
 
-    # Search for matching flashcards
     cursor.execute("""
         SELECT * FROM flashcards WHERE term LIKE %s OR definition LIKE %s
     """, ('%' + query + '%', '%' + query + '%'))
@@ -192,8 +207,84 @@ def search():
 
     connection.close()
 
-    # Render a page with the search results
     return render_template('search_results.html', query=query, decks=decks_result, flashcards=flashcards_result)
+
+@app.route('/review/<int:deck_id>', methods=['GET','POST'])
+def review(deck_id):
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    
+    cursor.execute("SELECT * FROM flashcards WHERE deck_id = %s", (deck_id,))
+    flashcards = cursor.fetchall()
+    connection.close()
+    
+    cards = []
+    for row in flashcards:
+        card = NewCard(
+            id=str(row['id']),
+            front=row['term'],
+            back=row['definition'],
+            last_reviewed=row['last_reviewed'],
+            interval=row['spaced_interval'],
+            ease=row['ease'],
+            step=row['step'],
+            status=row['status']
+        )
+        cards.append(card)
+
+    review_cards = cards.copy()
+    current_card = review_cards[0] if review_cards else None
+    
+    if current_card:
+        flashcard = {
+            "term": current_card.front,
+            "definition": current_card.back,
+            "id": current_card.id
+        }
+    else:
+        flashcard = None
+        
+    return render_template('review.html', flashcard=flashcard)
+
+@app.route('/grade/<int:card_id>', methods=['POST'])
+def grade(card_id):
+    grade = request.form['grade']  
+    
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    cursor.execute("SELECT * FROM flashcards WHERE id = %s", (card_id,))
+    row = cursor.fetchone()
+    
+    card = NewCard(
+            id=str(row['id']),
+            front=row['term'],
+            back=row['definition'],
+            last_reviewed=row['last_reviewed'],
+            interval=row['spaced_interval'],
+            ease=row['ease'],
+            step=row['step'],
+            status=row['status']
+        )
+    
+    card.grade_answer(grade)  
+
+    cursor.execute("""
+        UPDATE flashcards 
+        SET spaced_interval = %s, ease = %s, step = %s, status = %s, last_reviewed = %s
+        WHERE id = %s
+    """, (
+        card.interval.total_seconds() if card.interval else None,
+        card.ease,
+        card.step,
+        card.status,
+        card.last_reviewed.strftime('%Y-%m-%d %H:%M:%S'),
+        card_id
+    ))
+
+    connection.commit()
+    connection.close()
+
+    return redirect(url_for('review', deck_id=row['deck_id']))
 
 
 if __name__ == '__main__':

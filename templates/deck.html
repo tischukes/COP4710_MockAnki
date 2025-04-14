@@ -16,15 +16,6 @@
     {% endfor %}
 </ul>
 
-<!---
-<ul>
-    {% for flashcard in flashcards %}
-        <li>
-            <strong>{{ flashcard['term'] }}:</strong> {{ flashcard['definition'] }}
-        </li>
-    {% endfor %}
-</ul>
--->
 
 <h3>Add a New Flashcard to {{ deck_name }}</h3>
 <form action="{{ url_for('add_flashcard', deck_id=deck_id) }}" method="POST">
