@@ -5,8 +5,8 @@
 </head>
 <body>
     {% if flashcard %}
-        <p>Term: {{ flashcard['term'] }}</p>
-        <p>Definition: {{ flashcard['definition'] }}</p>
+        <p>Term: {{ flashcard.term }}</p>
+        <p>Definition: {{ flashcard.definition }}</p>
         <form method="POST" action="{{ url_for('grade', card_id=flashcard['id']) }}">
             
             <label for="response">Rate your familiarity (1-4):</label>
@@ -20,6 +20,9 @@
         </form>
     {% else %}
         <p>No more flashcards to review.</p>
+        <a href="{{ url_for('index')}}">
+            <button>End Session</button>
+        </a>
     {% endif %}
 </body>
 </html>

@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, render_template, redirect, url_for
+from flask import Flask, jsonify, request, render_template, redirect, url_for, session
 from dotenv import load_dotenv
 from datetime import datetime
 from datetime import timedelta as td
@@ -7,9 +7,11 @@ import pymysql
 import random
 from simple_spaced_repetition import Card
 
+
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = 'capybara'
 
 # Get MySQL connection details from environment variables
 MYSQL_HOST = os.getenv('MYSQL_HOST')
@@ -209,7 +211,8 @@ def search():
 
     return render_template('search_results.html', query=query, decks=decks_result, flashcards=flashcards_result)
 
-@app.route('/review/<int:deck_id>', methods=['GET','POST'])
+# get session to have current_index start at 0. be able to recognize a new session 
+@app.route('/review/<int:deck_id>', methods=['GET'])
 def review(deck_id):
     connection = get_db_connection()
     cursor = connection.cursor()
@@ -232,18 +235,31 @@ def review(deck_id):
         )
         cards.append(card)
 
-    review_cards = cards.copy()
-    current_card = review_cards[0] if review_cards else None
-    
-    if current_card:
+    # Check if new session or deck has changed
+    if (
+        'current_index' not in session or 
+        'shuffled_ids' not in session or
+        session.get('deck_id') != deck_id
+    ):
+        session['current_index'] = 0
+        random.shuffle(cards)
+        session['shuffled_ids'] = [card.id for card in cards]
+        session['deck_id'] = deck_id  # Track current deck
+
+    card_id_order = session.get('shuffled_ids', [])
+    cards_dict = {card.id: card for card in cards}
+
+    if session['current_index'] >= len(card_id_order):
+        flashcard = None  # finished
+    else:
+        current_id = card_id_order[session['current_index']]
+        current_card = cards_dict[current_id]
         flashcard = {
             "term": current_card.front,
             "definition": current_card.back,
             "id": current_card.id
         }
-    else:
-        flashcard = None
-        
+
     return render_template('review.html', flashcard=flashcard)
 
 @app.route('/grade/<int:card_id>', methods=['POST'])
@@ -283,7 +299,8 @@ def grade(card_id):
 
     connection.commit()
     connection.close()
-
+    session['current_index'] +=1
+   
     return redirect(url_for('review', deck_id=row['deck_id']))
 
 
