@@ -2,6 +2,7 @@ import requests
 import csv
 import re
 import nltk
+import time
 from collections import Counter
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
@@ -12,17 +13,16 @@ from deep_translator import GoogleTranslator
 nltk.download('punkt')
 nltk.download('stopwords')
 
-# Function to fetch the full article content from Spanish Wikipedia API (no references)
-def fetch_wikipedia_article(title):
-    url = "https://es.wikipedia.org/w/api.php"
+# Function to fetch the full article content from Wikipedia API (no references)
+def fetch_wikipedia_article(title, lang_code='es'):
+    url = f"https://{lang_code}.wikipedia.org/w/api.php"
     params = {
         "action": "query",
         "format": "json",
         "titles": title,
-        "prop": "extracts",  # Fetches the article text
-        "exintro": False,  # This ensures you fetch the full article (not just the introduction)
+        "prop": "extracts",
+        "exintro": False,
     }
-
     response = requests.get(url, params=params)
     data = response.json()
     page = list(data['query']['pages'].values())[0]
@@ -53,19 +53,46 @@ def remove_references(text):
 
     return str(soup)
 
-# Function to process text and calculate word frequency (specifically for Spanish)
-def process_text(text):
+# Function to process text and calculate word frequency
+def process_text(text, lang_code='es'):
     # Clean the text
     cleaned_text = clean_text(text)
 
-    # Tokenize the cleaned text
-    words = word_tokenize(cleaned_text, language='spanish')
+    # Map Wikipedia language codes to NLTK language names
+    lang_map = {
+        'es': 'spanish',
+        'fr': 'french',
+        'de': 'german',
+        'it': 'italian',
+        'pt': 'portuguese'
+    }
 
-    # Remove stopwords (in Spanish)
-    stop_words = set(stopwords.words('spanish'))
+    # Get NLTK language name or fall back to English
+    nltk_lang = lang_map.get(lang_code, 'english')
+
+    # Load sentence tokenizer for the language
+    try:
+        sentence_tokenizer = nltk.data.load(f'tokenizers/punkt/{nltk_lang}.pickle')
+    except LookupError:
+        print(f"Tokenizer for '{nltk_lang}' not found. Downloading punkt again.")
+        nltk.download('punkt', force=True)
+        sentence_tokenizer = nltk.data.load(f'tokenizers/punkt/{nltk_lang}.pickle')
+
+    # Tokenize into sentences, then words
+    sentences = sentence_tokenizer.tokenize(cleaned_text)
+    words = []
+    for sentence in sentences:
+        words.extend(word_tokenize(sentence))
+
+    # Load stopwords for the language
+    try:
+        stop_words = set(stopwords.words(nltk_lang))
+    except OSError:
+        print(f"Stopwords for '{nltk_lang}' not found. Using empty set.")
+        stop_words = set()
+
+    # Filter out stopwords and count word frequency
     words = [word for word in words if word not in stop_words]
-
-    # Count the frequency of words
     word_freq = Counter(words)
 
     return word_freq
@@ -83,14 +110,19 @@ def save_to_csv(word_freq, filename='top_100_words.csv'):
 
     print(f"Top 100 words saved to {filename}")
 
-# Function to translate words from Spanish to English
-def translate_words(word_list):
+# Function to translate words to English
+def translate_words(word_list, source_lang='es', target_lang='en'):
     translations = []
     for word in word_list:
-        translated = GoogleTranslator(source='es', target='en').translate(word)
-        translations.append([word, translated])
-
+        try:
+            translated = GoogleTranslator(source=source_lang, target=target_lang).translate(word)
+            translations.append([word, translated])
+            time.sleep(0.5)
+        except Exception as e:
+            print(f"Error translating {word}: {e}")
+            translations.append([word, ""])
     return translations
+
 
 # Function to save translated words to CSV
 def save_translated_words(translations, filename='translated_words.csv'):
