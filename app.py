@@ -67,9 +67,15 @@ current_card_index = 0
 def index():
     if 'user_id' in session:
         connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("SELECT * FROM decks")
-        decks = cursor.fetchall()
+        with connection.cursor() as cursor: # aggregate function 
+            cursor.execute("""
+                SELECT decks.id, decks.name, COUNT(flashcards.id) AS flashcard_count
+                FROM decks
+                LEFT JOIN flashcards ON flashcards.deck_id = decks.id
+                GROUP BY decks.id
+                ORDER BY decks.name
+            """)
+            decks = cursor.fetchall()
         connection.close()
         return render_template('index.html', decks=decks)
     else: 
@@ -90,7 +96,6 @@ def signup():
                        (username, email, hashed_pw))
         conn.commit()
         conn.close()
-        #flash("Account created! Please log in.")
         return redirect(url_for('login'))
 
     return render_template('signup.html')

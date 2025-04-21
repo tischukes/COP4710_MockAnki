@@ -56,7 +56,7 @@
         {% for deck in decks %}
         <li>
             <a href="{{ url_for('print_deck', deck_id=deck['id']) }}">
-                {{ deck['name'] }}
+                {{ deck['name'] }} ({{ deck['flashcard_count'] }} cards) 
             </a>
 
             <a href="{{ url_for('review', deck_id=deck['id']) }}">
