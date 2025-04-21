@@ -62,6 +62,11 @@
             <a href="{{ url_for('review', deck_id=deck['id']) }}">
                 <button>Review</button>
             </a>
+
+            <form action="{{ url_for('delete_deck', deck_id=deck['id']) }}" method="POST">
+                <button>Delete</button>
+            </form>
+
         </li>
         {% endfor %}
     </ul>
@@ -160,5 +165,12 @@
             });
         });
     </script>    
+=======
+    <br>
+    <form action="{{ url_for('logout') }}" method="POST">
+        <button type="submit">Logout</button>
+    </form>
+
+
 </body>
 </html>
