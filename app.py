@@ -6,7 +6,7 @@ import os
 import pymysql
 import random
 from simple_spaced_repetition import Card
-
+from wiki_api import fetch_wikipedia_article, remove_references, process_text, translate_words
 
 load_dotenv()
 
@@ -109,6 +109,44 @@ def add_deck():
         return redirect(url_for('index'))
     else:
         return jsonify({"message": "Deck name cannot be empty."})
+    
+@app.route('/add_deck_wikipedia', methods=['POST'])
+def add_deck_wikipedia():
+    deck_name = request.form['deck_name']
+    lang_code = request.form['language']
+
+    if not deck_name:
+        return jsonify({"message": "Deck name is required."}), 400
+
+    # Attempt to fetch the article
+    article_content = fetch_wikipedia_article(deck_name, lang_code)
+
+    # If article content is empty or fetch failed, return an error and don't create the deck
+    if not article_content:
+        return jsonify({"message": "Failed to fetch Wikipedia article. Please try again."}), 400
+
+    # Continue with the normal processing if the article is fetched successfully
+    clean_article = remove_references(article_content)
+    word_freq = process_text(clean_article, lang_code)
+
+    top_words = [word for word, _ in word_freq.most_common(100)]
+    translations = translate_words(top_words, source_lang=lang_code, target_lang='en')
+
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    cursor.execute("INSERT INTO decks (name, language_code) VALUES (%s, %s)", (deck_name, lang_code))
+    connection.commit()
+
+    cursor.execute("SELECT LAST_INSERT_ID() AS id")
+    deck_id = cursor.fetchone()['id']
+
+    for source_word, translated_word in translations:
+        cursor.execute("""INSERT INTO flashcards (term, definition, deck_id) VALUES (%s, %s, %s)""", (source_word, translated_word, deck_id))
+
+    connection.commit()
+    connection.close()
+
+    return redirect(url_for('print_deck', deck_id=deck_id))
 
 @app.route('/add_flashcard/<int:deck_id>', methods=['POST'])
 def add_flashcard(deck_id):

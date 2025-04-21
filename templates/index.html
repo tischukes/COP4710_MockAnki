@@ -4,6 +4,49 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flashcards App</title>
+    <style>
+        form {
+            margin-top: 20px;
+        }
+
+        /* CSS for the spinner */
+        .spinner {
+            border: 6px solid #f3f3f3;
+            border-top: 6px solid #3498db;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* CSS for the error message */
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            padding: 15px;
+            margin-top: 20px;
+            display: none; /* Initially hidden */
+            border-radius: 5px;
+        }
+
+        /* CSS for success message */
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            padding: 15px;
+            margin-top: 20px;
+            display: none;
+            border-radius: 5px;
+        }
+    </style>
 </head>
 <body>
     <h1>Mock Anki</h1>
@@ -30,11 +73,92 @@
         <button type="submit">Add Deck</button>
     </form>
 
+    <!-- Add Deck using Wikipedia Form -->
+    <h2>Add Deck using Wikipedia:</h2>
+    <form id="wikipedia-form" action="{{ url_for('add_deck_wikipedia') }}" method="POST">
+        <label for="deck_name">In the following, please write the Wikipedia article name in the language that you want to use:</label><br>
+        <label for="deck_name">Deck Name (also Wikipedia article name):</label>
+        <input type="text" id="deck_name" name="deck_name" required>
+    
+        <label for="language">Language:</label>
+        <select name="language" id="language" required>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="it">Italian</option>
+            <option value="pt">Portuguese</option>
+        </select>
+    
+        <button type="submit" id="wikipedia-submit-button">Add Deck</button>
+    </form>
+    
+    <!-- Display error message (hidden by default) -->
+    <div id="error-message" class="error-message"></div>
+
+    <!-- Display success message (hidden by default) -->
+    <div id="success-message" class="success-message"></div>
+
+    <!-- Loading Spinner (hidden by default) -->
+    <div id="loading" style="display:none; margin-top: 20px;">
+        <p>Creating your deck... Please wait ⏳</p>
+        <div class="spinner"></div>
+    </div>
+
     <h3>Search</h3>
     <form action="{{ url_for('search') }}" method="GET">
         <input type="text" name="query" placeholder="Search decks or flashcards..." required>
         <button type="submit">Search</button>
     </form>
 
+    <script>
+        document.getElementById("wikipedia-form").addEventListener("submit", function (event) {
+            event.preventDefault();  // Prevent default form submission
+    
+            // Clear previous messages
+            document.getElementById("error-message").style.display = 'none';
+            document.getElementById("success-message").style.display = 'none';
+    
+            const formData = new FormData(event.target);
+            const submitButton = document.getElementById("wikipedia-submit-button");
+    
+            // Disable the submit button and show loading
+            submitButton.disabled = true;
+            submitButton.textContent = "Creating...";
+            document.getElementById("loading").style.display = 'block';
+    
+            fetch('/add_deck_wikipedia', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                document.getElementById("loading").style.display = 'none';
+                submitButton.disabled = false;
+                submitButton.textContent = "Add Deck";
+    
+                if (response.ok) {
+                    document.getElementById("success-message").textContent = "Deck successfully created!";
+                    document.getElementById("success-message").style.display = 'block';
+                    window.location.href = response.url;
+                } else {
+                    return response.json();
+                }
+            })
+            .then(data => {
+                if (data && data.message) {
+                    document.getElementById("error-message").textContent = data.message;
+                    document.getElementById("error-message").style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById("loading").style.display = 'none';
+                submitButton.disabled = false;
+                submitButton.textContent = "Add Deck";
+    
+                document.getElementById("error-message").textContent = 'Something went wrong. Please try again.';
+                document.getElementById("error-message").style.display = 'block';
+            });
+        });
+    </script>    
 </body>
 </html>
