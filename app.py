@@ -1,4 +1,5 @@
-from flask import Flask, jsonify, request, render_template, redirect, url_for, session
+from flask import Flask, jsonify, request, render_template, redirect, url_for, session, flash 
+from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from datetime import datetime
 from datetime import timedelta as td
@@ -64,15 +65,68 @@ current_card_index = 0
 
 @app.route('/')
 def index():
-    connection = get_db_connection()
-    cursor = connection.cursor()
-    
-    cursor.execute("SELECT * FROM decks") 
-    decks = cursor.fetchall()
-    connection.close()
+    if 'user_id' in session:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM decks")
+        decks = cursor.fetchall()
+        connection.close()
+        return render_template('index.html', decks=decks)
+    else: 
+        return render_template('signinpage.html')
 
-    return render_template('index.html', decks=decks)
+@app.route('/signup', methods=['GET','POST'])
+def signup():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        hashed_pw = generate_password_hash(password)
 
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("INSERT INTO users (username, email, password_hash) VALUES (%s, %s, %s)", 
+                       (username, email, hashed_pw))
+        conn.commit()
+        conn.close()
+        #flash("Account created! Please log in.")
+        return redirect(url_for('login'))
+
+    return render_template('signup.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    print("Request method:", request.method)
+
+    if request.method == 'POST':
+
+        username = request.form['username']
+        password = request.form['password']
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+        user = cursor.fetchone()
+        conn.close()
+
+        if user and check_password_hash(user['password_hash'], password):
+            session['user_id'] = user['id']
+            print("Login successful.")
+            return redirect(url_for('index'))
+        else:
+            print("Invalid credentials.")
+
+    return render_template('login.html')
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    session.pop('user_id', None)  # Remove the user_id from the session
+    return redirect(url_for('signinpage'))
+
+@app.route('/signinpage')
+def signinpage():
+    return render_template('signinpage.html')
 
 @app.route('/deck/<int:deck_id>', methods=['GET'])
 def print_deck(deck_id):
@@ -110,6 +164,16 @@ def add_deck():
     else:
         return jsonify({"message": "Deck name cannot be empty."})
 
+@app.route('/delete_deck/<int:deck_id>', methods=['POST'])
+def delete_deck(deck_id):
+    connection = get_db_connection()
+    with connection.cursor() as cursor:
+        cursor.execute("DELETE FROM flashcards WHERE deck_id = %s", (deck_id,))
+        cursor.execute("DELETE FROM decks WHERE id = %s", (deck_id,))
+        connection.commit()
+    connection.close()
+    return redirect(url_for('index'))
+
 @app.route('/add_flashcard/<int:deck_id>', methods=['POST'])
 def add_flashcard(deck_id):
     term = request.form['term']
@@ -143,10 +207,7 @@ def delete_flashcard(flashcard_id):
         
         deck_id = flashcard['deck_id']
 
-        cursor.execute("UPDATE flashcards SET deck_id = NULL WHERE id = %s", (flashcard_id,))
-
-        # to fully delete : cursor.execute("DELETE FROM flashcards WHERE id = %s", (flashcard_id,))
-        # currently thinking of sending null deck_id cards to a recycling bin to either be added to an existing deck of ultimately deleted
+        cursor.execute("DELETE FROM flashcards WHERE id = %s", (flashcard_id,))
 
         connection.commit()
 
