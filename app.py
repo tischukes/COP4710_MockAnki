@@ -361,6 +361,40 @@ def review(deck_id):
 
     return render_template('review.html', flashcard=flashcard)
 
+@app.route('/merge_decks', methods=['POST'])
+def merge_decks():
+    deck_id_1 = int(request.form['deck1_id'])
+    deck_id_2 = int(request.form['deck2_id'])
+    new_deck_name = request.form['new_deck_name']
+
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    # Create the new deck
+    cursor.execute("INSERT INTO decks (name) VALUES (%s)", (new_deck_name,))
+    connection.commit()
+
+    cursor.execute("SELECT LAST_INSERT_ID() AS id")
+    new_deck_id = cursor.fetchone()['id']
+
+    # Get flashcards from both decks
+    cursor.execute("SELECT term, definition FROM flashcards WHERE deck_id = %s OR deck_id = %s", (deck_id_1, deck_id_2))
+    flashcards = cursor.fetchall()
+
+    # Insert flashcards into the new deck
+    for card in flashcards:
+        cursor.execute(
+            "INSERT INTO flashcards (term, definition, deck_id) VALUES (%s, %s, %s)",
+            (card['term'], card['definition'], new_deck_id)
+        )
+
+    connection.commit()
+    connection.close()
+
+    flash("Decks merged successfully!")
+    return redirect(url_for('print_deck', deck_id=new_deck_id))
+
+
 @app.route('/grade/<int:card_id>', methods=['POST'])
 def grade(card_id):
     grade = request.form['grade']  
