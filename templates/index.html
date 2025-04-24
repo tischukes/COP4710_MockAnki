@@ -109,6 +109,28 @@
         <div class="spinner"></div>
     </div>
 
+    <h2>Merge Decks:</h2>
+    <form action="{{ url_for('merge_decks') }}" method="POST">
+        <label for="deck1_id">Select First Deck:</label>
+        <select name="deck1_id" required>
+            {% for deck in decks %}
+                <option value="{{ deck['id'] }}">{{ deck['name'] }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="deck2_id">Select Second Deck:</label>
+        <select name="deck2_id" required>
+            {% for deck in decks %}
+                <option value="{{ deck['id'] }}">{{ deck['name'] }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="new_deck_name">New Deck Name:</label>
+        <input type="text" name="new_deck_name" required>
+
+        <button type="submit">Merge Decks</button>
+    </form>
+
     <h3>Search</h3>
     <form action="{{ url_for('search') }}" method="GET">
         <input type="text" name="query" placeholder="Search decks or flashcards..." required>
